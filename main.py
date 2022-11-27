@@ -3,6 +3,7 @@ import os
 
 from i18n import translations
 import data
+import functions
 
 # Read Config
 conf = data.NMSLConfig()
@@ -92,17 +93,18 @@ class NewInstanceDialog(wx.Dialog):
                                                      wx.DefaultPosition, wx.Size(100, -1), 0)
         self.select_serverside_label.Wrap(-1)
 
-        select_serversideChoices = [u"Vanilla", u"Forge", u"Fabric", u"Spigot", u"Paper"]
+        self.select_serversideChoices = [u"Vanilla", u"Forge", u"Fabric", u"Spigot", u"Paper"]
         self.select_serverside = wx.Choice(self, wx.ID_ANY, wx.DefaultPosition, wx.Size(310, -1),
-                                           select_serversideChoices, 0)
+                                           self.select_serversideChoices, 0)
         self.select_serverside.SetSelection(0)
 
         self.select_version_label = wx.StaticText(self, wx.ID_ANY, trans.gui.window.new_instance.select_version,
                                                   wx.DefaultPosition, wx.Size(100, -1), 0)
         self.select_version_label.Wrap(-1)
 
-        select_versionChoices = [u"1.19", u"1.18", u"1.17"]
-        self.select_version = wx.Choice(self, wx.ID_ANY, wx.DefaultPosition, wx.Size(310, -1), select_versionChoices, 0)
+        self.select_version = wx.Choice(self, wx.ID_ANY, wx.DefaultPosition, wx.Size(310, -1),
+                                        functions.get_serverside_version_list(
+                                            self.select_serversideChoices[self.select_serverside.GetSelection()]), 0)
         self.select_version.SetSelection(0)
 
         self.refresh = wx.Button(self, wx.ID_ANY, trans.gui.window.new_instance.refresh_metadata,
@@ -127,7 +129,9 @@ class NewInstanceDialog(wx.Dialog):
 
         self.Centre(wx.BOTH)
 
+        self.Bind(wx.EVT_CHOICE, self.OnChoice)
         self.Bind(wx.EVT_BUTTON, self.OnSubmit, self.go)
+        self.Bind(wx.EVT_BUTTON, self.OnRefresh, self.refresh)
 
         self.trans = trans
         self.servers = servers
@@ -156,6 +160,17 @@ class NewInstanceDialog(wx.Dialog):
                                  wx.YES_NO | wx.ICON_INFORMATION) == wx.YES:
                 return
         self.EndModal(wx.ID_OK)
+
+    def OnRefresh(self, event=None):
+        self.select_version.Clear()
+        self.select_version.AppendItems(
+            functions.get_serverside_version_list(
+                self.select_serversideChoices[self.select_serverside.GetSelection()]))
+        self.select_version.SetSelection(0)
+
+    def OnChoice(self, event):
+        if event.GetEventObject() == self.select_serverside:
+            self.OnRefresh()
 
     def GetValue(self):
         return self.name_textctrl.GetValue(), self.select_dir.GetPath(), \

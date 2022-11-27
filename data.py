@@ -61,4 +61,15 @@ class NMSLConfig:
 
 
 class ServerConfig:
-    pass
+    def __init__(self, path):
+        self.path = path
+        self.config = dict
+        self.initial_config()
+
+    def initial_config(self):
+        # Initialization
+        pass
+
+    def read_config(self):
+        with open(f'{self.path}'):
+            pass
