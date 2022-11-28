@@ -21,8 +21,11 @@ class NMSLFrame(wx.Frame):
         font = wx.Font(32, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False, 'OCR A Extended')
         st.SetFont(font)
 
+        # tc = wx.TreeCtrl(self, wx.ID_ANY, wx.DefaultPosition, wx.Size(200, 300), wx.TR_DEFAULT_STYLE)
+
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(st, wx.SizerFlags().Border(wx.TOP | wx.LEFT, 25))
+        #sizer.Add(tc)
         pnl.SetSizer(sizer)
 
         # create a menu bar
@@ -159,6 +162,7 @@ class NewInstanceDialog(wx.Dialog):
                                  self.trans.gui.window.new_instance.dir_has_file_title,
                                  wx.YES_NO | wx.ICON_INFORMATION) == wx.YES:
                 return
+        conf.config['SERVERS'].append(self.select_dir.GetPath())
         self.EndModal(wx.ID_OK)
 
     def OnRefresh(self, event=None):
