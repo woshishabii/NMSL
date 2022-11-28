@@ -21,6 +21,9 @@ class en_US_Translation:
             exit = 'Exit'
             about = 'About NMSL'
 
+        class serverlist:
+            servers = 'Servers'
+
         class window:
             class about:
                 title = 'About NMSL'
@@ -42,6 +45,8 @@ class en_US_Translation:
                 dir_has_file_title = 'Folder is not Empty'
                 dir_has_file_config = 'There is a config file in selected Directory, Import?'
                 dir_has_file = 'There are file in selected folder, Continue?'
+                down_progress_title = 'Downloading...'
+                down_progress = 'Downloading'
 
 
 class zh_CN_Translation:
@@ -67,6 +72,9 @@ class zh_CN_Translation:
             exit = '退出'
             about = '关于NMSL'
 
+        class serverlist:
+            servers = 'MC服务器'
+
         class window:
             class about:
                 title = '关于 NMSL'
@@ -88,6 +96,8 @@ class zh_CN_Translation:
                 dir_has_file_title = '文件夹非空'
                 dir_has_file_config = '文件夹内存在配置文件，导入？'
                 dir_has_file = '文件夹非空，仍然使用?'
+                down_progress_title = '下载中...'
+                down_progress = '下载中'
 
 
 translations = {

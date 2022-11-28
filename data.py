@@ -11,7 +11,8 @@ DEFAULT_NMSL_CONFIG = {
 DEFAULT_SERVER_CONFIG = {
     'CONFIG_VERSION': DEFAULT_NMSL_CONFIG['VERSION'],
     'VERSION': 'Unknown',
-    'SERVERSIDE': 'Vanilla'
+    'NAME': 'Untitled',
+    'SERVERSIDE': 'Vanilla',
 }
 
 
@@ -58,6 +59,10 @@ class NMSLConfig:
             self.save_config()
         return self.config['SERVERS']
 
+    def add_server(self, path):
+        self.config['SERVERS'].append(path)
+        self.save_config()
+
 
 class ServerConfig:
     def __init__(self, path):
@@ -92,6 +97,7 @@ class ServerConfig:
             return False
         if 'SERVERSIDE' not in self.config:
             return False
+        self.save_config()
         return True
 
     def read_config(self):
@@ -100,4 +106,4 @@ class ServerConfig:
 
     def save_config(self):
         with open(self.config_path, 'w') as f:
-            json.dump(self.config, f)
+            json.dump(self.config, f, indent=4)

@@ -1,5 +1,8 @@
+import socket
+
 import wx
 import os
+import requests
 
 from i18n import translations
 import data
@@ -12,49 +15,53 @@ lang = translations[conf.config['LANG']]
 
 
 class NMSLFrame(wx.Frame):
-    def __init__(self, *args, **kw):
-        super(NMSLFrame, self).__init__(*args, **kw)
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=lang.gui.title, pos=wx.DefaultPosition,
+                          size=wx.Size(500, 300), style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL)
+        self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
 
-        pnl = wx.Panel(self)
+        self.statusBar = self.CreateStatusBar(1, wx.STB_SIZEGRIP)
+        self.menuBar = wx.MenuBar(0)
+        self.fileMenu = wx.Menu()
+        self.newInstanceItem = wx.MenuItem(self.fileMenu, wx.ID_ANY, f'{lang.gui.filemenu.new_instance}\tCtrl-N',
+                                           lang.gui.statusbar.new_instance, wx.ITEM_NORMAL)
+        self.exitItem = wx.MenuItem(self.fileMenu, wx.ID_ANY, f'{lang.gui.filemenu.exit}\tCtrl-X',
+                                    lang.gui.statusbar.exit, wx.ITEM_NORMAL)
+        self.fileMenu.Append(self.newInstanceItem)
+        self.fileMenu.AppendSeparator()
+        self.fileMenu.Append(self.exitItem)
+        self.menuBar.Append(self.fileMenu, f'{lang.gui.menu.file}(&F)')
+        self.helpMenu = wx.Menu()
+        self.aboutItem = wx.MenuItem(self.helpMenu, wx.ID_ANY, lang.gui.helpmenu.about,
+                                     lang.gui.statusbar.about, wx.ITEM_NORMAL)
+        self.helpMenu.Append(self.aboutItem)
+        self.menuBar.Append(self.helpMenu, f'{lang.gui.menu.help}(&H)')
+        self.SetMenuBar(self.menuBar)
+        self.Bind(wx.EVT_MENU, self.OnNewInstance, self.newInstanceItem)
+        self.Bind(wx.EVT_MENU, self.OnExit, self.exitItem)
+        self.Bind(wx.EVT_MENU, self.OnAbout, self.aboutItem)
 
-        st = wx.StaticText(pnl, label="Hello NMSL!")
-        font = wx.Font(32, wx.DEFAULT, wx.NORMAL, wx.NORMAL, False, 'OCR A Extended')
-        st.SetFont(font)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
 
-        # tc = wx.TreeCtrl(self, wx.ID_ANY, wx.DefaultPosition, wx.Size(200, 300), wx.TR_DEFAULT_STYLE)
+        self.serverList = wx.TreeCtrl(self, wx.ID_ANY, wx.DefaultPosition, wx.Size(150, 300), wx.TR_DEFAULT_STYLE)
+        self.serverListRoot = self.serverList.AddRoot(socket.gethostname())
+        self.serverListServers = self.serverList.AppendItem(self.serverListRoot, lang.gui.serverlist.servers)
+        # print(self.serverList.GetItemText(self.serverList.GetSelection()))
+        self.sizer.Add(self.serverList, 0, wx.ALL, 5)
+        # self.Bind(wx.EVT_TREE_KEY_DOWN, self.OnRefreshList, self.serverList)
 
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(st, wx.SizerFlags().Border(wx.TOP | wx.LEFT, 25))
-        #sizer.Add(tc)
-        pnl.SetSizer(sizer)
+        self.SetSizer(self.sizer)
+        self.Layout()
+
+        self.Centre(wx.BOTH)
 
         # create a menu bar
-        self.makeMenuBar()
+        # self.makeMenuBar()
 
         # and a status bar
-        self.CreateStatusBar()
+        # self.CreateStatusBar()
         self.SetStatusText(lang.gui.statusbar.welcome)
-
-    def makeMenuBar(self):
-        fileMenu = wx.Menu()
-        newInstanceItem = fileMenu.Append(-1, f'{lang.gui.filemenu.new_instance}\tCtrl-N',
-                                          lang.gui.statusbar.new_instance)
-        fileMenu.AppendSeparator()
-        exitItem = fileMenu.Append(-1, f'{lang.gui.filemenu.exit}\tCtrl-X',
-                                   lang.gui.statusbar.exit)
-
-        helpMenu = wx.Menu()
-        aboutItem = helpMenu.Append(-1, f'{lang.gui.helpmenu.about}',
-                                    lang.gui.statusbar.about)
-        menuBar = wx.MenuBar()
-        menuBar.Append(fileMenu, f'{lang.gui.menu.file}(&F)')
-        menuBar.Append(helpMenu, f'{lang.gui.menu.help}(&H)')
-
-        self.SetMenuBar(menuBar)
-
-        self.Bind(wx.EVT_MENU, self.OnNewInstance, newInstanceItem)
-        self.Bind(wx.EVT_MENU, self.OnExit, exitItem)
-        self.Bind(wx.EVT_MENU, self.OnAbout, aboutItem)
+        self.refreshList()
 
     def OnExit(self, event):
         self.Close(True)
@@ -69,6 +76,14 @@ class NMSLFrame(wx.Frame):
         wx.MessageBox(lang.gui.window.about.content,
                       lang.gui.window.about.title,
                       wx.OK | wx.ICON_INFORMATION)
+
+    def refreshList(self):
+        self.serverList.DeleteChildren(self.serverListServers)
+        conf.read_config()
+        print(conf.get_servers())
+        for _ in conf.get_servers():
+            sc = data.ServerConfig(_)
+            self.serverList.AppendItem(self.serverListServers, sc.config['NAME'])
 
 
 class NewInstanceDialog(wx.Dialog):
@@ -105,9 +120,10 @@ class NewInstanceDialog(wx.Dialog):
                                                   wx.DefaultPosition, wx.Size(100, -1), 0)
         self.select_version_label.Wrap(-1)
 
+        self.version_list = functions.get_serverside_version_list(self.select_serversideChoices
+                                                                  [self.select_serverside.GetSelection()])
         self.select_version = wx.Choice(self, wx.ID_ANY, wx.DefaultPosition, wx.Size(310, -1),
-                                        functions.get_serverside_version_list(
-                                            self.select_serversideChoices[self.select_serverside.GetSelection()]), 0)
+                                        self.version_list, 0)
         self.select_version.SetSelection(0)
 
         self.refresh = wx.Button(self, wx.ID_ANY, trans.gui.window.new_instance.refresh_metadata,
@@ -162,14 +178,22 @@ class NewInstanceDialog(wx.Dialog):
                                  self.trans.gui.window.new_instance.dir_has_file_title,
                                  wx.YES_NO | wx.ICON_INFORMATION) == wx.YES:
                 return
-        conf.config['SERVERS'].append(self.select_dir.GetPath())
+        conf.add_server(self.select_dir.GetPath())
+        self.sc = data.ServerConfig(self.select_dir.GetPath())
+        self.sc.config['NAME'] = self.name_textctrl.GetValue()
+        self.sc.config['SERVERSIDE'] = self.select_serversideChoices[self.select_serverside.GetSelection()]
+        self.sc.config['VERSION'] = self.version_list[self.select_version.GetSelection()]
+        self.sc.save_config()
+        self.Parent.refreshList()
+        self.DownloadServer()
         self.EndModal(wx.ID_OK)
 
     def OnRefresh(self, event=None):
         self.select_version.Clear()
-        self.select_version.AppendItems(
-            functions.get_serverside_version_list(
-                self.select_serversideChoices[self.select_serverside.GetSelection()]))
+        self.version_list = functions.get_serverside_version_list(
+            self.select_serversideChoices[self.select_serverside.GetSelection()]
+        )
+        self.select_version.AppendItems(self.version_list)
         self.select_version.SetSelection(0)
 
     def OnChoice(self, event):
@@ -180,9 +204,32 @@ class NewInstanceDialog(wx.Dialog):
         return self.name_textctrl.GetValue(), self.select_dir.GetPath(), \
                self.select_serverside.GetSelection(), self.select_version.GetSelection()
 
+    def DownloadServer(self):
+        l = functions.get_link(
+            self.select_serversideChoices[self.select_serverside.GetSelection()],
+            self.version_list[self.select_version.GetSelection()]
+        )
+        head = requests.head(l)
+        fs = head.headers.get('Content-Length')
+        if fs is not None:
+            fs = int(fs)
+        r = requests.get(l, stream=True)
+        cs = 1024
+        self.progress_dia = wx.ProgressDialog(lang.gui.window.new_instance.down_progress_title,
+                                              lang.gui.window.new_instance.down_progress,
+                                              maximum=fs,
+                                              style=wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME | wx.PD_ESTIMATED_TIME)
+        dl = 0
+        os.mkdir(f'{self.sc.path}/server')
+        with open(f'{self.sc.path}/server/server.jar', 'wb') as f:
+            for c in r.iter_content(chunk_size=cs):
+                f.write(c)
+                dl += cs
+                self.progress_dia.Update(dl)
+
 
 if __name__ == '__main__':
     app = wx.App()
-    frm = NMSLFrame(None, title=lang.gui.title)
+    frm = NMSLFrame(None)
     frm.Show()
     app.MainLoop()

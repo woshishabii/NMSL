@@ -52,6 +52,15 @@ def get_serverside_version_list(serverside, mirror='BMCL'):
     return res
 
 
+def get_link(serverside, version, mirror='BMCL'):
+    res = ''
+    match serverside:
+        case 'Vanilla':
+            for _ in requests.get(VANILLA_VERSION_MANIFEST[mirror]).json()['versions']:
+                if _['id'] == version:
+                    return requests.get(_['url']).json()['downloads']['server']['url']
+
+
 # TEST:
 if __name__ == '__main__':
     print(get_serverside_version_list('Spigot'))
