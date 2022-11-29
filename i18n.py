@@ -1,5 +1,9 @@
+VERSION = 'v-Lithium 0.1 20221129'
+
+
 class en_US_Translation:
     __lang__ = 'en-US'
+    description = 'A Minecraft Server Launcher that helps you set up your server faster'
 
     class gui:
         title = 'NMSL V-Lithium'
@@ -51,6 +55,7 @@ class en_US_Translation:
 
 class zh_CN_Translation:
     __lang__ = 'zh-CN'
+    description = '一个简单的MC服务器管理/启动器'
 
     class gui:
         title = 'NMSL V-Lithium'

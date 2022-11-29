@@ -1,5 +1,6 @@
 import requests
 from lxml import etree
+import data
 
 VANILLA_VERSION_MANIFEST = {
     'MOJANG': 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json',
@@ -59,6 +60,12 @@ def get_link(serverside, version, mirror='BMCL'):
             for _ in requests.get(VANILLA_VERSION_MANIFEST[mirror]).json()['versions']:
                 if _['id'] == version:
                     return requests.get(_['url']).json()['downloads']['server']['url']
+        case 'Forge':
+            pass
+
+
+def install_server(sc: data.ServerConfig):
+    pass
 
 
 # TEST:
