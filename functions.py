@@ -1,5 +1,11 @@
+import os
+
 import requests
 from lxml import etree
+import shutil
+import wx
+import subprocess
+
 import data
 
 VANILLA_VERSION_MANIFEST = {
@@ -8,7 +14,7 @@ VANILLA_VERSION_MANIFEST = {
 }
 
 FORGE_API = {
-    'BMCL_MCVERSION': 'https://bmclapi2.bangbang93.com/forge/minecraft'
+    'BMCL_MCVERSION': 'https://bmclapi2.bangbang93.com/forge/minecraft',
 }
 
 FABRIC_API = {
@@ -59,13 +65,69 @@ def get_link(serverside, version, mirror='BMCL'):
         case 'Vanilla':
             for _ in requests.get(VANILLA_VERSION_MANIFEST[mirror]).json()['versions']:
                 if _['id'] == version:
-                    return requests.get(_['url']).json()['downloads']['server']['url']
+                    res = requests.get(_['url']).json()['downloads']['server']['url']
         case 'Forge':
-            pass
+            versions = [_['version'] for _ in requests.get(f'{FORGE_API["BMCL_MCVERSION"]}/{version}').json()]
+            versions.sort(key=lambda x: tuple(int(v) for v in x.split('.')), reverse=True)
+            res = f'https://bmclapi2.bangbang93.com/forge/download?mcversion={version}&version={versions[0]}' \
+                  '&category=installer&format=jar'
+    return res
 
 
-def install_server(sc: data.ServerConfig):
-    pass
+def install_server(nid):
+    # Download
+    link = get_link(
+        nid.select_serversideChoices[nid.select_serverside.GetSelection()],
+        nid.version_list[nid.select_version.GetSelection()]
+    )
+    header = requests.head(link, allow_redirects=True)
+    filesize = header.headers.get('Content-Length')
+    if filesize is not None:
+        filesize = int(filesize)
+    response = requests.get(link, stream=True, allow_redirects=True)
+    cs = 512
+    dialog = wx.ProgressDialog(nid.trans.gui.window.new_instance.down_progress_title,
+                               nid.trans.gui.window.new_instance.down_progress,
+                               maximum=filesize,
+                               style=wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME | wx.PD_ESTIMATED_TIME)
+    dl = 0
+    os.mkdir(f'{nid.sc.path}/server')
+    os.mkdir(f'{nid.sc.path}/cache')
+    with open(f'{nid.sc.path}/cache/installer.jar', 'wb') as f:
+        for chunk in response.iter_content(chunk_size=cs):
+            f.write(chunk)
+            dl += cs
+            if dl > filesize:
+                dl = filesize
+            dialog.Update(dl)
+    match nid.select_serversideChoices[nid.select_serverside.GetSelection()]:
+        case 'Vanilla':
+            shutil.move(f'{nid.sc.path}/cache/installer.jar',
+                        f'{nid.sc.path}/server/server.jar')
+            nid.sc.config['EXEC_TYPE'] = 'Java'
+            nid.sc.config['EXEC'] = '-jar server.jar'
+            nid.sc.save_config()
+        case 'Forge':
+            p = os.popen(f'java -jar {nid.sc.path}/cache/installer.jar --installServer {nid.sc.path}/server/')
+            if 'You can delete this installer file now if you wish' in p.read():
+                wx.MessageDialog(None, nid.trans.gui.window.new_instance.install_success,
+                                 nid.trans.gui.window.new_instance.install_title_success,
+                                 wx.OK | wx.ICON_INFORMATION)
+                nid.sc.config['EXEC_TYPE'] = 'Shell'
+                nid.sc.config['EXEC'] = 'run.bat'
+                nid.sc.config.save_config()
+            else:
+                wx.MessageDialog(None, nid.trans.gui.window.new_instance.install_fail,
+                                 nid.trans.gui.window.new_instance.install_title_fail,
+                                 wx.OK | wx.ICON_ERROR)
+
+
+def start_server(sc: data.ServerConfig):
+    match sc.config['EXEC_TYPE']:
+        case 'Shell':
+            subprocess.call(f'start {sc.config["EXEC"]}', cwd=f'{sc.path}/server', shell=True)
+        case 'Java':
+            subprocess.call(f'start java {sc.config["EXEC"]}', cwd=f'{sc.path}/server', shell=True)
 
 
 # TEST:

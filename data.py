@@ -5,7 +5,7 @@ import shutil
 DEFAULT_NMSL_CONFIG = {
     'VERSION': 0,
     'LANG': 'zh-CN',
-    'SERVERS': []
+    'SERVERS': {}
 }
 
 DEFAULT_SERVER_CONFIG = {
@@ -13,6 +13,8 @@ DEFAULT_SERVER_CONFIG = {
     'VERSION': 'Unknown',
     'NAME': 'Untitled',
     'SERVERSIDE': 'Vanilla',
+    'EXEC_TYPE': 'java',
+    'EXEC': '-jar server.jar'
 }
 
 
@@ -55,12 +57,19 @@ class NMSLConfig:
     def get_servers(self):
         self.read_config()
         if 'SERVERS' not in self.config:
-            self.config['SERVERS'] = []
+            self.config['SERVERS'] = {}
             self.save_config()
-        return self.config['SERVERS']
+        if type(self.config['SERVERS']) == list:
+            r = {}
+            for _ in self.config['SERVERS']:
+                sc = ServerConfig(_)
+                r[sc.config['NAME']] = _
+            self.config['SERVERS'] = r
+            self.save_config()
+        return self.config['SERVERS'].keys()
 
-    def add_server(self, path):
-        self.config['SERVERS'].append(path)
+    def add_server(self, sc):
+        self.config['SERVERS'][sc.config['NAME']] = sc.path
         self.save_config()
 
 
@@ -78,8 +87,8 @@ class ServerConfig:
         # Initialization
         if os.path.exists(self.config_path):
             self.read_config()
+            shutil.copy(self.config_path, f'{self.config_path}.bak')
             if not self.validate_config():
-                shutil.copy(self.config_path, f'{self.config_path}.bak')
                 self.initial_empty_config()
         else:
             self.initial_empty_config()
@@ -93,9 +102,15 @@ class ServerConfig:
             self.config['NAME'] = 'Untitled'
         if 'VERSION' not in self.config:
             self.config['VERSION'] = 'Unknown'
-        if 'CONFIG_VERSION' not in self.config:
-            return False
         if 'SERVERSIDE' not in self.config:
+            self.config['SERVERSIDE'] = 'Vanilla'
+        if 'EXEC_TYPE' not in self.config:
+            if 'EXEC' in self.config:
+                self.config['EXEC_TYPE'] = 'Shell'
+            else:
+                self.config['EXEC_TYPE'] = 'Java'
+                self.config['EXEC'] = '-jar server.jar'
+        if 'CONFIG_VERSION' not in self.config:
             return False
         self.save_config()
         return True

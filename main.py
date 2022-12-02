@@ -2,7 +2,9 @@ import socket
 
 import wx
 import wx.adv
+import wx.propgrid
 
+import functions
 import i18n
 from i18n import translations
 import data
@@ -19,6 +21,7 @@ class NMSLFrame(wx.Frame):
         wx.Frame.__init__(self, parent, id=wx.ID_ANY, title=lang.gui.title, pos=wx.DefaultPosition,
                           size=wx.Size(500, 300), style=wx.DEFAULT_FRAME_STYLE | wx.TAB_TRAVERSAL)
         self.SetSizeHints(wx.DefaultSize, wx.DefaultSize)
+        self.SetBackgroundColour(wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW))
 
         self.statusBar = self.CreateStatusBar(1, wx.STB_SIZEGRIP)
         self.menuBar = wx.MenuBar(0)
@@ -41,16 +44,30 @@ class NMSLFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, self.OnExit, self.exitItem)
         self.Bind(wx.EVT_MENU, self.OnAbout, self.aboutItem)
 
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
-
         self.serverList = wx.TreeCtrl(self, wx.ID_ANY, wx.DefaultPosition, wx.Size(150, 300), wx.TR_DEFAULT_STYLE)
         self.serverListRoot = self.serverList.AddRoot(socket.gethostname())
         self.serverListServers = self.serverList.AppendItem(self.serverListRoot, lang.gui.serverlist.servers)
-        # print(self.serverList.GetItemText(self.serverList.GetSelection()))
+        self.Bind(wx.EVT_TREE_SEL_CHANGED, self.OnServerInfo, self.serverList)
+
+        self.serverPropertyGrid = wx.propgrid.PropertyGrid(self, wx.ID_ANY, wx.DefaultPosition,
+                                                           wx.Size(310, -1), wx.propgrid.PG_DEFAULT_STYLE)
+        self.serverPropertyGridName = self.serverPropertyGrid.Append(wx.propgrid.StringProperty('Name', 'Name'))
+
+        self.start = wx.Button(self, wx.ID_ANY, lang.gui.homepage.start_server, wx.DefaultPosition, wx.Size(72, -1), 0)
+        self.Bind(wx.EVT_BUTTON, self.OnStart, self.start)
+
+        self.sizer = wx.WrapSizer(wx.HORIZONTAL, wx.WRAPSIZER_DEFAULT_FLAGS)
+        self.sub_sizer1 = wx.WrapSizer(wx.HORIZONTAL, wx.WRAPSIZER_DEFAULT_FLAGS)
+
+        self.sub_sizer1.Add(self.serverPropertyGrid, 0, wx.ALL, 5)
+        self.sub_sizer1.Add(self.start, 0, wx.ALL, 5)
+
         self.sizer.Add(self.serverList, 0, wx.ALL, 5)
-        # self.Bind(wx.EVT_TREE_KEY_DOWN, self.OnRefreshList, self.serverList)
+        self.sizer.Add(self.sub_sizer1, 1, wx.EXPAND, 5)
+        # self.sizer.Add(self.serverPropertyGrid, 0, wx.ALL, 5)
 
         self.SetSizer(self.sizer)
+
         self.Layout()
 
         self.Centre(wx.BOTH)
@@ -89,13 +106,30 @@ class NMSLFrame(wx.Frame):
         about_dia.AddDocWriter('woshishabii')
         wx.adv.AboutBox(about_dia)
 
+    def OnStart(self, event):
+        functions.start_server(data.ServerConfig(conf.config['SERVERS']
+                                                 [self.serverList.GetItemText(self.serverList.GetSelection())]))
+
     def refreshList(self):
         self.serverList.DeleteChildren(self.serverListServers)
         conf.read_config()
         print(conf.get_servers())
         for _ in conf.get_servers():
-            sc = data.ServerConfig(_)
-            self.serverList.AppendItem(self.serverListServers, sc.config['NAME'])
+            # sc = data.ServerConfig(_)
+            # self.serverList.AppendItem(self.serverListServers, sc.config['NAME'])
+            self.serverList.AppendItem(self.serverListServers, _)
+
+    def OnServerInfo(self, event):
+        # print(self.serverList.GetItemText(self.serverList.GetSelection()))
+        _ = self.serverList.GetItemText(self.serverList.GetSelection())
+        if _ in conf.config['SERVERS']:
+            self.serverPropertyGridName.SetValue(_)
+            self.serverPropertyGrid.Enable(True)
+            self.start.Enable(True)
+        else:
+            self.serverPropertyGridName.SetValue('')
+            self.serverPropertyGrid.Enable(False)
+            self.start.Enable(False)
 
 
 if __name__ == '__main__':

@@ -98,14 +98,15 @@ class NewInstanceDialog(wx.Dialog):
                                  self.trans.gui.window.new_instance.dir_has_file_title,
                                  wx.YES_NO | wx.ICON_INFORMATION) == wx.YES:
                 return
-        self.conf.add_server(self.select_dir.GetPath())
         self.sc = data.ServerConfig(self.select_dir.GetPath())
+        print(self.sc.path)
         self.sc.config['NAME'] = self.name_textctrl.GetValue()
         self.sc.config['SERVERSIDE'] = self.select_serversideChoices[self.select_serverside.GetSelection()]
         self.sc.config['VERSION'] = self.version_list[self.select_version.GetSelection()]
         self.sc.save_config()
+        self.conf.add_server(self.sc)
         self.Parent.refreshList()
-        self.DownloadServer()
+        functions.install_server(self)
         self.EndModal(wx.ID_OK)
 
     def OnRefresh(self, event=None):
