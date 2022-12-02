@@ -18,15 +18,20 @@ FORGE_API = {
 }
 
 FABRIC_API = {
-    'FABRIC_MCVERSION': 'https://meta.fabricmc.net/v2/versions',
+    'FABRIC_MCVERSION': 'https://meta.fabricmc.net/v2/versions/game',
+    'FABRIC_INSTALLER_VERSION': 'https://meta.fabricmc.net/v2/versions/installer',
 }
 
 SPIGOT_API = {
-    'SPIGOT_VERSIONS_API': "https://hub.spigotmc.org/versions/",
+    'SPIGOT_VERSIONS_API': 'https://hub.spigotmc.org/versions/',
+    'BUILDTOOLS': 'https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar'
 }
 
 PAPER_API = {
     'VERSIONS': 'https://api.papermc.io/v2/projects/paper/',
+    'PAPER_VERSION_CONTROLLER': 'https://api.papermc.io/v2/projects/paper/versions/{}',
+    'PAPER_VERSION_BUILD_CONTROLLER': 'https://api.papermc.io/v2/projects/paper/versions/{}/builds/{}',
+    'PAPER_DOWNLOAD_CONTROLLER': 'https://api.papermc.io/v2/projects/paper/versions/{}/builds/{}/downloads/{}'
 }
 
 
@@ -45,8 +50,7 @@ def get_serverside_version_list(serverside, mirror='BMCL'):
         case 'Fabric':
             r = requests.get(FABRIC_API['FABRIC_MCVERSION']).json()
             # res = [_['version'] for _ in res['game']]
-            res = [f"{_['gameVersion']}{_['separator']}{_['build']}"
-                   for _ in r['mappings']]
+            res = [_['version'] for _ in r]
         case 'Spigot':
             r = requests.get(SPIGOT_API['SPIGOT_VERSIONS_API']).text
             res = list({_[:-5] if '1.1' in _ else None
@@ -60,6 +64,7 @@ def get_serverside_version_list(serverside, mirror='BMCL'):
 
 
 def get_link(serverside, version, mirror='BMCL'):
+    # Return the link of server or the latest version of installer
     res = ''
     match serverside:
         case 'Vanilla':
@@ -71,6 +76,15 @@ def get_link(serverside, version, mirror='BMCL'):
             versions.sort(key=lambda x: tuple(int(v) for v in x.split('.')), reverse=True)
             res = f'https://bmclapi2.bangbang93.com/forge/download?mcversion={version}&version={versions[0]}' \
                   '&category=installer&format=jar'
+        case 'Fabric':
+            res = requests.get(FABRIC_API['FABRIC_INSTALLER_VERSION']).json()[0]['url']
+        case 'Spigot':
+            res = SPIGOT_API['BUILDTOOLS']
+        case 'Paper':
+            _1 = requests.get(PAPER_API['PAPER_VERSION_CONTROLLER'].format(version)).json()['builds'][-1]
+            _2 = requests.get(PAPER_API['PAPER_VERSION_BUILD_CONTROLLER'].
+                              format(version, _1)).json()['downloads']['application']['name']
+            res = PAPER_API['PAPER_DOWNLOAD_CONTROLLER'].format(version, _1, _2)
     return res
 
 
@@ -120,6 +134,37 @@ def install_server(nid):
                 wx.MessageDialog(None, nid.trans.gui.window.new_instance.install_fail,
                                  nid.trans.gui.window.new_instance.install_title_fail,
                                  wx.OK | wx.ICON_ERROR)
+        case 'Fabric':
+            p = os.popen(f'java -jar {nid.sc.path}/cache/installer.jar server '
+                         f'-mcversion {nid.version_list[nid.select_version.GetSelection()]} '
+                         f'-dir {nid.sc.path}/server/ -downloadMinecraft')
+            _ = p.read()
+            if '安装完成' in _ or 'Done' in _:
+                wx.MessageDialog(None, nid.trans.gui.window.new_instance.install_success,
+                                 nid.trans.gui.window.new_instance.install_title_success,
+                                 wx.OK | wx.ICON_INFORMATION)
+                nid.sc.config['EXEC_TYPE'] = 'Java'
+                nid.sc.config['EXEC'] = '-jar fabric-server-launch.jar'
+                nid.sc.save_config()
+            else:
+                wx.MessageDialog(None, _, nid.trans.gui.window.new_instance.install_title_fail,
+                                 wx.OK | wx.ICON_ERROR)
+        case 'Spigot':
+            subprocess.call(f'start java -jar installer.jar --compile SPIGOT --disable-certificate-check '
+                            f'-o ../server --rev {nid.version_list[nid.select_version.GetSelection()]} '
+                            f'--disable-java-check', cwd=f'{nid.sc.path}/cache', shell=True)
+            nid.sc.config['EXEC_TYPE'] = 'Java'
+            nid.sc.config['EXEC'] = f'-jar spigot-{nid.version_list[nid.select_version.GetSelection()]}.jar'
+            nid.sc.save_config()
+            wx.MessageDialog(None, nid.trans.gui.window.new_instance.install_spigot,
+                             nid.trans.gui.window.new_instance.install_title_success,
+                             wx.OK | wx.ICON_INFORMATION)
+        case 'Paper':
+            shutil.move(f'{nid.sc.path}/cache/installer.jar',
+                        f'{nid.sc.path}/server/server.jar')
+            nid.sc.config['EXEC_TYPE'] = 'Java'
+            nid.sc.config['EXEC'] = '-jar server.jar'
+            nid.sc.save_config()
 
 
 def start_server(sc: data.ServerConfig):
@@ -132,4 +177,4 @@ def start_server(sc: data.ServerConfig):
 
 # TEST:
 if __name__ == '__main__':
-    print(get_serverside_version_list('Spigot'))
+    print(get_link('Paper', '1.19.2'))

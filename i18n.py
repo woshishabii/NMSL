@@ -54,6 +54,7 @@ class en_US_Translation:
                 install_title_fail = 'Fail'
                 install_success = 'Installation Success'
                 install_fail = 'Installation Failed! Check ./installer.jar.log pls'
+                install_spigot = 'Spigot is being installed, progress can be checked in the command prompt.'
 
 
 class zh_CN_Translation:
@@ -113,6 +114,7 @@ class zh_CN_Translation:
                 install_title_fail = '失败'
                 install_success = '安装成功'
                 install_fail = '安装失败，请检查./installer.jar.log'
+                install_spigot = 'Spigot安装中，可在弹出的命令行中查看进度'
 
 
 translations = {
