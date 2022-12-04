@@ -52,6 +52,9 @@ class NMSLFrame(wx.Frame):
         self.serverPropertyGrid = wx.propgrid.PropertyGrid(self, wx.ID_ANY, wx.DefaultPosition,
                                                            wx.Size(310, -1), wx.propgrid.PG_DEFAULT_STYLE)
         self.serverPropertyGridName = self.serverPropertyGrid.Append(wx.propgrid.StringProperty('Name', 'Name'))
+        self.serverPropertyGridPath = self.serverPropertyGrid.Append(wx.propgrid.StringProperty('Path', 'Path'))
+        self.serverPropertyGridServerside = self.serverPropertyGrid.Append(
+            wx.propgrid.StringProperty('Server-side', 'Server-side'))
 
         self.start = wx.Button(self, wx.ID_ANY, lang.gui.homepage.start_server, wx.DefaultPosition, wx.Size(72, -1), 0)
         self.Bind(wx.EVT_BUTTON, self.OnStart, self.start)
@@ -123,12 +126,21 @@ class NMSLFrame(wx.Frame):
         # print(self.serverList.GetItemText(self.serverList.GetSelection()))
         _ = self.serverList.GetItemText(self.serverList.GetSelection())
         if _ in conf.config['SERVERS']:
+            sc = data.ServerConfig(conf.config['SERVERS'][_])
             self.serverPropertyGridName.SetValue(_)
-            self.serverPropertyGrid.Enable(True)
+            self.serverPropertyGridName.Enable(True)
+            self.serverPropertyGridPath.SetValue(sc.path)
+            self.serverPropertyGridPath.Enable(True)
+            self.serverPropertyGridServerside.SetValue(sc.config['SERVERSIDE'])
+            self.serverPropertyGridServerside.Enable(True)
             self.start.Enable(True)
         else:
             self.serverPropertyGridName.SetValue('')
-            self.serverPropertyGrid.Enable(False)
+            self.serverPropertyGridName.Enable(False)
+            self.serverPropertyGridPath.SetValue('')
+            self.serverPropertyGridPath.Enable(False)
+            self.serverPropertyGridServerside.SetValue('')
+            self.serverPropertyGridServerside.Enable(False)
             self.start.Enable(False)
 
 
