@@ -125,25 +125,5 @@ class NewInstanceDialog(wx.Dialog):
         return self.name_textctrl.GetValue(), self.select_dir.GetPath(), \
                self.select_serverside.GetSelection(), self.select_version.GetSelection()
 
-    def DownloadServer(self):
-        l = functions.get_link(
-            self.select_serversideChoices[self.select_serverside.GetSelection()],
-            self.version_list[self.select_version.GetSelection()]
-        )
-        head = requests.head(l)
-        fs = head.headers.get('Content-Length')
-        if fs is not None:
-            fs = int(fs)
-        r = requests.get(l, stream=True)
-        cs = 1024
-        self.progress_dia = wx.ProgressDialog(self.trans.gui.window.new_instance.down_progress_title,
-                                              self.trans.gui.window.new_instance.down_progress,
-                                              maximum=fs,
-                                              style=wx.PD_ELAPSED_TIME | wx.PD_REMAINING_TIME | wx.PD_ESTIMATED_TIME)
-        dl = 0
-        os.mkdir(f'{self.sc.path}/server')
-        with open(f'{self.sc.path}/server/server.jar', 'wb') as f:
-            for c in r.iter_content(chunk_size=cs):
-                f.write(c)
-                dl += cs
-                self.progress_dia.Update(dl)
+    def setupServer(self):
+        pass
