@@ -2,7 +2,6 @@ import wx
 import os
 import functions
 import data
-import requests
 
 
 class NewInstanceDialog(wx.Dialog):
